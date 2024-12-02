@@ -2,6 +2,8 @@
 
 This friendly tool helps you quickly understand what's in your PowerPoint presentations by creating an Excel file with a neat overview of all your slides.
 
+![screenshot.png](./screenshot.png)
+
 ## What does it do?
 
 - Scans through all PowerPoint files in a folder you choose
