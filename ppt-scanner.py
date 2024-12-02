@@ -5,6 +5,7 @@ import sys
 import openai
 import time
 from dotenv import load_dotenv
+from tqdm import tqdm
 
 # Load environment variables from .env file
 load_dotenv()
@@ -63,35 +64,46 @@ def get_ppt_info(directory, api_key):
     # Supported PowerPoint extensions
     ppt_extensions = ('.pptx', '.ppt')
     
-    # Walk through the directory
-    for filename in os.listdir(directory):
-        if filename.lower().endswith(ppt_extensions):
-            filepath = os.path.join(directory, filename)
+    # Get list of PowerPoint files
+    ppt_files = [f for f in os.listdir(directory) if f.lower().endswith(ppt_extensions)]
+    
+    if not ppt_files:
+        print("No PowerPoint files found in the specified directory!")
+        return []
+    
+    print(f"Found {len(ppt_files)} PowerPoint file(s)")
+    
+    # Process each PowerPoint file with progress bar
+    for filename in tqdm(ppt_files, desc="Processing files", unit="file"):
+        filepath = os.path.join(directory, filename)
+        
+        try:
+            # Process each slide in the presentation
+            prs = Presentation(filepath)
+            slides = list(prs.slides)
             
-            try:
-                # Process each slide in the presentation
-                prs = Presentation(filepath)
-                for slide_number, slide in enumerate(prs.slides, 1):
-                    # Extract text from the slide
-                    slide_text = extract_slide_text(slide)
-                    
-                    # Get key phrase using OpenAI API
-                    key_phrase = get_key_phrase(slide_text, api_key)
-                    
-                    # Add data to list
-                    ppt_data.append({
-                        'Filename': filename,
-                        'Slide Number': slide_number,
-                        'Key Phrase': key_phrase
-                    })
-                    
-                    # Add a small delay to avoid hitting API rate limits
-                    time.sleep(0.5)
-                    
-            except Exception as e:
-                print(f"Error processing {filename}: {str(e)}")
-                if "insufficient_quota" in str(e) or "billing" in str(e).lower():
-                    sys.exit(1)  # Terminate on API quota issues
+            # Inner progress bar for slides
+            for slide_number, slide in enumerate(tqdm(slides, desc=f"Processing {filename}", unit="slide", leave=False), 1):
+                # Extract text from the slide
+                slide_text = extract_slide_text(slide)
+                
+                # Get key phrase using OpenAI API
+                key_phrase = get_key_phrase(slide_text, api_key)
+                
+                # Add data to list
+                ppt_data.append({
+                    'Filename': filename,
+                    'Slide Number': slide_number,
+                    'Key Phrase': key_phrase
+                })
+                
+                # Add a small delay to avoid hitting API rate limits
+                time.sleep(0.5)
+                
+        except Exception as e:
+            print(f"Error processing {filename}: {str(e)}")
+            if "insufficient_quota" in str(e) or "billing" in str(e).lower():
+                sys.exit(1)  # Terminate on API quota issues
     
     return ppt_data
 
@@ -118,8 +130,9 @@ def main():
     ppt_data = get_ppt_info(directory, api_key)
     
     if not ppt_data:
-        print("No PowerPoint files found in the specified directory!")
         return
+    
+    print("\nGenerating Excel file...")
     
     # Create DataFrame and export to Excel
     df = pd.DataFrame(ppt_data)
