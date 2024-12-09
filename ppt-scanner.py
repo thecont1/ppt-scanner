@@ -60,6 +60,7 @@ def get_ppt_info(directory, api_key):
         sys.exit(1)
     
     ppt_data = []
+    total_slides = 0
     
     # Supported PowerPoint extensions
     ppt_extensions = ('.pptx', '.ppt')
@@ -81,30 +82,40 @@ def get_ppt_info(directory, api_key):
             # Process each slide in the presentation
             prs = Presentation(filepath)
             slides = list(prs.slides)
+            slide_count = len(slides)
+            total_slides += slide_count
+            
+            # Print message for processed PPT file
+            print(f"{filename} ({slide_count} slides)")
             
             # Inner progress bar for slides
-            for slide_number, slide in enumerate(tqdm(slides, desc=f"Processing {filename}", unit="slide", leave=False), 1):
-                # Extract text from the slide
-                slide_text = extract_slide_text(slide)
-                
-                # Get key phrase using OpenAI API
-                key_phrase = get_key_phrase(slide_text, api_key)
-                
-                # Add data to list
-                ppt_data.append({
-                    'Filename': filename,
-                    'Slide Number': slide_number,
-                    'Key Phrase': key_phrase
-                })
-                
-                # Add a small delay to avoid hitting API rate limits
-                time.sleep(0.5)
-                
+            with tqdm(total=slide_count, desc=f"Processing {filename}", unit="slide", leave=False) as pbar:
+                for slide_number, slide in enumerate(slides, 1):
+                    # Extract text from the slide
+                    slide_text = extract_slide_text(slide)
+                    
+                    # Get key phrase using OpenAI API
+                    key_phrase = get_key_phrase(slide_text, api_key)
+                    
+                    # Add data to list
+                    ppt_data.append({
+                        'Filename': filename,
+                        'Slide Number': slide_number,
+                        'Key Phrase': key_phrase
+                    })
+                    
+                    # Update the progress bar
+                    pbar.update(1)
+                    
+                    # Add a small delay to avoid hitting API rate limits
+                    time.sleep(0.5)
+            
         except Exception as e:
             print(f"Error processing {filename}: {str(e)}")
             if "insufficient_quota" in str(e) or "billing" in str(e).lower():
                 sys.exit(1)  # Terminate on API quota issues
     
+    print(f"Total number of slides = {total_slides}")
     return ppt_data
 
 def main():
