@@ -74,6 +74,6 @@ If you run into any issues or have questions, here are some common solutions:
 
 This program needs:
 
-- Python 3.6 or newer
+- Python 3.10 or newer
 - The packages listed in `requirements.txt`
 - An OpenAI API key

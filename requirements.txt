@@ -4,3 +4,4 @@ python-pptx==0.6.18
 openpyxl==3.1.2
 openai==0.28
 tqdm==4.66.3
+xlsxwriter==3.3.1
